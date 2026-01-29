@@ -1,11 +1,19 @@
-# MVP3 - GUI 窗口模块
+"""
+MVP3 - GUI 窗口模块
+"""
+
+import logging
 import tkinter as tk
 import ctypes
+
+logger = logging.getLogger(__name__)
+
 
 user32 = ctypes.windll.user32
 
 
-class PolishWindow:
+class WisadelWindow:
+
     def __init__(self, on_accept_callback=None):
         self.root = tk.Tk()
         self.root.title("Wisadel")
@@ -53,6 +61,7 @@ class PolishWindow:
 
     def _on_copy(self):
         """将左侧文本复制到右侧"""
+        # Tkinter Text.get() 会在末尾自动加一个 \n，需要去掉
         text = self.left_text.get("1.0", tk.END).rstrip('\n')
         # TODO: 用 AI 润色
         self.right_text.delete("1.0", tk.END)
@@ -68,10 +77,11 @@ class PolishWindow:
         """显示窗口"""
         self.root.deiconify()
         self.root.lift()
-        # 方案 A：立即用 Windows API 请求前台焦点
+        # 使用 Windows API 请求前台焦点
         hwnd = self.root.winfo_id()
         user32.SetForegroundWindow(hwnd)
-        # 方案 C：唤起时自动全选左侧文本
+        # 唤起时自动全选左侧文本
+        # "1.0" 表示第 1 行第 0 列（文本开头），tk.END 表示文本末尾
         self.left_text.tag_add(tk.SEL, "1.0", tk.END)
         self.left_text.mark_set(tk.INSERT, "1.0")
         self.left_text.focus_set()
@@ -83,10 +93,7 @@ class PolishWindow:
     def get_output_text(self):
         """获取右侧输出文本"""
         # Tkinter Text.get() 会在末尾自动加一个 \n，需要去掉
-        text = self.right_text.get("1.0", tk.END)
-        if text.endswith('\n'):
-            text = text[:-1]
-        return text
+        return self.right_text.get("1.0", tk.END).rstrip('\n')
 
     def run(self):
         """启动主循环"""
