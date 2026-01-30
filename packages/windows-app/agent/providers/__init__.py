@@ -5,7 +5,9 @@ LLM Providers
 """
 
 from .minimax_provider import MinimaxProvider
+from .glm_provider import GLMProvider
 
 __all__ = [
     "MinimaxProvider",
+    "GLMProvider",
 ]
