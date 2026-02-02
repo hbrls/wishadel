@@ -5,8 +5,10 @@ MVP3 - 桌面级文本润色验证工具
 import logging
 import logger_config  # 只为触发全局日志配置，无变量冲突
 import keyboard
+import os
 from gui import WisadelWindow
 from focus import FocusManager
+from agent import Wisadel, MinimaxProvider
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +59,16 @@ def on_accept(text):
         logger.debug("文本为空，跳过注入")
 
 
+def create_wisadel():
+    """创建 Wisadel Agent 实例"""
+    api_key = os.getenv("WISADEL_MINIMAX_API_KEY")
+    if not api_key:
+        raise ValueError("请设置环境变量 WISADEL_MINIMAX_API_KEY")
+    
+    model = MinimaxProvider(api_key=api_key)
+    return Wisadel(model=model)
+
+
 def main():
     # 需要对全局变量 window 赋值，其他函数只读取
     global window
@@ -65,11 +77,14 @@ def main():
     logger.info("  MVP3 - 桌面级文本润色验证工具")
     logger.info("=" * 50)
     logger.info("  快捷键: Alt+W")
-    logger.info("  流程: 左侧输入原文 → 右侧编辑润色 → Accept 上屏")
+    logger.info("  流程: 左侧输入原文 → 润色 → Accept 上屏")
     logger.info("=" * 50)
     
+    # 创建 Wisadel 实例
+    wisadel = create_wisadel()
+    
     # 创建 GUI（但不显示）
-    window = WisadelWindow(on_accept_callback=on_accept)
+    window = WisadelWindow(on_accept_callback=on_accept, wisadel=wisadel)
     
     # 注册全局快捷键
     register_hotkey('alt+w', on_hotkey)

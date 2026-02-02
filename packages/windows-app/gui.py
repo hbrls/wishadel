@@ -14,7 +14,7 @@ user32 = ctypes.windll.user32
 
 class WisadelWindow:
 
-    def __init__(self, on_accept_callback=None):
+    def __init__(self, on_accept_callback=None, wisadel=None):
         self.root = tk.Tk()
         self.root.title("Wisadel")
         self.root.attributes('-topmost', True)
@@ -22,6 +22,7 @@ class WisadelWindow:
         self.root.resizable(False, False)
         self.root.attributes('-toolwindow', True)
         self.on_accept = on_accept_callback
+        self.wisadel = wisadel
         self._setup_ui()
 
     def _setup_ui(self):
@@ -51,21 +52,33 @@ class WisadelWindow:
         btn_frame = tk.Frame(main_frame)
         btn_frame.pack(pady=(10, 0))
 
-        # 复制按钮：将左侧文本复制到右侧
-        self.copy_btn = tk.Button(btn_frame, text="复制到右侧", command=self._on_copy)
-        self.copy_btn.pack(side=tk.LEFT, padx=5)
+        # 润色按钮：将左侧文本润色后显示在右侧
+        self.polish_btn = tk.Button(btn_frame, text="润色", command=self._on_polish)
+        self.polish_btn.pack(side=tk.LEFT, padx=5)
 
         # Accept 按钮
         self.accept_btn = tk.Button(btn_frame, text="Accept", command=self._on_accept)
         self.accept_btn.pack(side=tk.LEFT, padx=5)
 
-    def _on_copy(self):
-        """将左侧文本复制到右侧"""
+    def _on_polish(self):
+        """润色按钮点击：调用 Wisadel 润色左侧文本"""
         # Tkinter Text.get() 会在末尾自动加一个 \n，需要去掉
         text = self.left_text.get("1.0", tk.END).rstrip('\n')
-        # TODO: 用 AI 润色
+        if not text:
+            return
+        
         self.right_text.delete("1.0", tk.END)
-        self.right_text.insert("1.0", text)
+        self.right_text.insert("1.0", "润色中...")
+        self.root.update()
+        
+        try:
+            result = self.wisadel.run(text)
+            self.right_text.delete("1.0", tk.END)
+            self.right_text.insert("1.0", result)
+        except Exception as e:
+            logger.error(f"润色失败: {e}")
+            self.right_text.delete("1.0", tk.END)
+            self.right_text.insert("1.0", f"润色失败: {e}")
 
     def _on_accept(self):
         """Accept 按钮点击"""
