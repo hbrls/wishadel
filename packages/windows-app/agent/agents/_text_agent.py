@@ -20,8 +20,7 @@ class _TextAgent(ABC):
         model: Model,
         system_prompt: str,
         max_steps: int = 10,
-        tools: Optional[List[Tool]] = None,
-        validator_tool: Optional[Tool] = None
+        tools: Optional[List[Tool]] = None
     ):
         """
         初始化 TextAgent
@@ -30,14 +29,12 @@ class _TextAgent(ABC):
             model: LLM Provider（MiniMax 等）
             system_prompt: System prompt，描述优化思路和要求
             max_steps: 最大循环次数（默认 10）
-            tools: 可选工具列表
-            validator_tool: 可选的内置验证工具
+            tools: 可选工具列表（包含验证工具等）
         """
         self.model = model
         self.system_prompt = system_prompt
         self.max_steps = max_steps
         self.tools = tools or []
-        self.validator_tool = validator_tool
     
     @abstractmethod
     def run(self, input_text: str) -> str:

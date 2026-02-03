@@ -2,12 +2,10 @@
 MVP3 - 焦点管理模块
 """
 
-import logging
 import ctypes
 import time
 
-
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 user32 = ctypes.windll.user32
 

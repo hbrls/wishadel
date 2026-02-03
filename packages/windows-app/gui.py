@@ -2,11 +2,13 @@
 MVP3 - GUI 窗口模块
 """
 
-import logging
 import tkinter as tk
 import ctypes
 
-logger = logging.getLogger(__name__)
+from loguru import logger
+
+# 文本字体设置 - 按优先级指定字体族
+TEXT_FONT_FAMILIES = ["Optima-Regular", "PingFang SC", "Cambria", "Cochin", "Georgia", "Times", "Times New Roman", "serif"]
 
 
 user32 = ctypes.windll.user32
@@ -38,27 +40,27 @@ class WisadelWindow:
         left_frame = tk.Frame(text_frame)
         left_frame.pack(side=tk.LEFT, padx=(0, 5))
         tk.Label(left_frame, text="原始文本").pack()
-        self.left_text = tk.Text(left_frame, width=40, height=20)
+        self.left_text = tk.Text(left_frame, width=40, height=35, font=(TEXT_FONT_FAMILIES[0], 10), spacing2=2, spacing3=2)
         self.left_text.pack()
+
+        # 润色按钮：放在左右文本框中间
+        self.polish_btn = tk.Button(text_frame, text="润", command=self._on_polish)
+        self.polish_btn.pack(side=tk.LEFT, padx=5)
 
         # 右侧：输出文本区
         right_frame = tk.Frame(text_frame)
         right_frame.pack(side=tk.LEFT, padx=(5, 0))
         tk.Label(right_frame, text="输出文本").pack()
-        self.right_text = tk.Text(right_frame, width=40, height=20)
+        self.right_text = tk.Text(right_frame, width=80, height=35, font=(TEXT_FONT_FAMILIES[0], 10), spacing2=2, spacing3=2)
         self.right_text.pack()
 
-        # 按钮区
+        # 按钮区（仅保留 Accept）
         btn_frame = tk.Frame(main_frame)
-        btn_frame.pack(pady=(10, 0))
+        btn_frame.pack(fill=tk.X, pady=(10, 0))
 
-        # 润色按钮：将左侧文本润色后显示在右侧
-        self.polish_btn = tk.Button(btn_frame, text="润色", command=self._on_polish)
-        self.polish_btn.pack(side=tk.LEFT, padx=5)
-
-        # Accept 按钮
+        # Accept 按钮 - 靠右对齐到右侧文本区
         self.accept_btn = tk.Button(btn_frame, text="Accept", command=self._on_accept)
-        self.accept_btn.pack(side=tk.LEFT, padx=5)
+        self.accept_btn.pack(anchor=tk.E)
 
     def _on_polish(self):
         """润色按钮点击：调用 Wisadel 润色左侧文本"""
@@ -66,11 +68,11 @@ class WisadelWindow:
         text = self.left_text.get("1.0", tk.END).rstrip('\n')
         if not text:
             return
-        
+
         self.right_text.delete("1.0", tk.END)
         self.right_text.insert("1.0", "润色中...")
         self.root.update()
-        
+
         try:
             result = self.wisadel.run(text)
             self.right_text.delete("1.0", tk.END)
