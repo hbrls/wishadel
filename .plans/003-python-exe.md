@@ -16,7 +16,7 @@
 | Task 3 | 全局快捷键 | Alt+W 可触发回调 | 启动时隐藏 GUI，通过快捷键唤起（唤起时记录原窗口） |
 | Task 4 | 复杂文本验证 | 中文、换行、长文本 | 验证复杂文本（中文、换行、长文本） |
 | Task 5 | 集成联调 | 完整流程验证 | 完整流程（端到端验证） |
-| Task 6 | 日志模块 | logger.py 实现 | 增加日志输出 |
+| Task 6 | 日志模块 | logger_config.py 实现 | 增加日志输出 |
 | Task 7 | 打包发布 | PyInstaller 生成 exe | 打包为 exe |
 
 ---
@@ -31,19 +31,38 @@
 
 > 虚拟环境由 PyCharm 管理，不在此计划中
 > 依赖管理以项目实际使用的 `requirements.txt` 为准
+> **目录结构以实际项目为准，此处仅作参考**
 
-### 目录结构
+### 实际目录结构
 
 ```
 packages/windows-app/
-├── main.py              # 主入口
-├── hotkey.py            # 全局快捷键模块
+├── main.py              # 主入口（包含全局快捷键）
 ├── focus.py             # 焦点管理 + 文本注入模块
 ├── gui.py               # Tkinter GUI 模块
-├── logger.py            # 日志模块
+├── logger_config.py     # 日志全局配置模块
 ├── requirements.txt     # Python 依赖列表
 ├── build.bat            # PyInstaller 打包脚本
 ├── Wisadel.spec         # PyInstaller 配置文件
+├── agent/               # Agent 模块（LLM 润色相关）
+│   ├── __init__.py
+│   ├── charms.py        # Prompt 模板
+│   ├── core.py          # Wisadel Agent 核心
+│   ├── agents/          # Agent 实现
+│   │   ├── __init__.py
+│   │   ├── _text_agent.py
+│   │   ├── polisher_agent.py
+│   │   ├── validator_agent.py
+│   │   └── tests/
+│   ├── providers/       # LLM Provider
+│   │   ├── __init__.py
+│   │   ├── minimax_provider.py
+│   │   └── tests/
+│   ├── tools/           # 工具
+│   │   ├── __init__.py
+│   │   └── validator.py
+│   └── tests/
+├── build/               # PyInstaller 构建目录
 └── dist/                # PyInstaller 输出目录
     └── Wisadel.exe      # 打包后的可执行文件
 ```
@@ -64,7 +83,7 @@ packages/windows-app/
 ### 接口声明
 
 ```python
-class PolishWindow:
+class WisadelWindow:
     def __init__(self, on_accept_callback)
     def show()
     def hide()
@@ -107,7 +126,7 @@ class FocusManager:
 - [x] 英文和中文文本可注入
 
 > 备注：使用 WM_CHAR + PostMessageW 方案，绕过输入法拦截
-> 
+>
 > **为何 SendInput 会被输入法干扰**：
 > - SendInput 发送的是虚拟按键码（VK），输入法会拦截这些按键事件
 > - 中文输入法会将按键序列转换为拼音候选，而不是直接输入字符
@@ -119,22 +138,25 @@ class FocusManager:
 
 ### 任务清单
 
-- [x] 实现 `hotkey.py`
-- [x] 使用 `keyboard` 库监听 `Alt+W`
-- [x] 触发时调用回调函数
-- [x] 验证：在记事本中按 Alt+W 能打印日志
+- [x] 实现 `main.py` 中注册 Alt+W 全局快捷键
+- [x] 快捷键触发时记录当前焦点窗口
+- [x] 唤起 GUI 时全选左侧文本
 
-### 接口声明
+### 核心逻辑
 
 ```python
-def register_hotkey(hotkey: str, callback: callable)
+# 快捷键回调
+def on_hotkey():
+    hwnd = focus_manager.save_current_focus()
+    window.show()
+    window.select_all_input()
 ```
 
 ### 验证点
 
-- [x] Alt+W 在任意应用中可触发
-
-> 备注：使用 `suppress=True` 阻止 Alt+W 键本身传递给前台应用，避免快捷键被前台应用处理（如触发应用的菜单快捷键）
+- [x] Alt+W 可唤起工具
+- [x] 唤起时记录原窗口 HWND
+- [x] 唤起时左侧文本全选
 
 ---
 
@@ -163,7 +185,7 @@ The quick brown fox jumps over the lazy dog.
 
 - **英文字符**: ABCDEFG abcdefg 0123456789
 - **中文字符**: 你好世界，这是一段测试文本
-- **特殊符号**: @#$%^&*() 【】「」
+- **特殊符号**: @#$%^&*() 【」
 - **Emoji**: 😀 🎉 💻 ❤️ 👍
 
 > 这是一段引用文字，用于测试多行场景。
@@ -185,16 +207,8 @@ The quick brown fox jumps over the lazy dog.
 
 ### 疑点
 
-- **SendInput 时序问题**：SendInput 发送 Shift+Enter 后需要 50ms 延迟，10ms 会导致异常行为（具体原因未明，可能是 WM_CHAR 与 SendInput 混用时消息队列处理顺序问题）
-
-- **Alt+W 唤起后焦点争抢**：窗口 topmost 但不一定获得焦点（表现为任务栏闪烁）
-  - 原因：Windows 前台窗口保护机制，后台进程调用 `SetForegroundWindow` 会被拒绝
-  - 解决方案：使用 `SetForegroundWindow(hwnd)`，部分应用不兼容（VSCode ✓，Trae ✗）
-
-### 风险
-
-- 部分应用可能不响应 WM_CHAR
-- 某些特殊字符可能需要特殊处理
+- **SendInput 时序问题**：SendInput 发送 Shift+Enter 后需要 50ms 延迟，10ms 会导致异常行为
+- **Alt+W 唤起后焦点争抢**：窗口 topmost 但不一定获得焦点
 
 ---
 
@@ -206,7 +220,7 @@ The quick brown fox jumps over the lazy dog.
 - [x] 实现完整流程（快捷键 → GUI → Accept → 恢复焦点 → 注入文本）
 - [x] 端到端测试（记事本、Chrome textarea）
 - [x] 多应用切换场景测试
-- [x] 实现 Alt+W 唤起时左侧文本全选（方案 C）
+- [x] 实现 Alt+W 唤起时左侧文本全选
 
 ### 核心流程
 
@@ -225,29 +239,22 @@ Accept 回调执行顺序：
 | 长文本 | 记事本 | 500字符无丢失 |
 | 浏览器 | Chrome textarea | 文本正确写入 |
 
-### 多应用切换用例
-
-> 工具是全局的，用户会在多个应用间切换使用
-
-1. 在记事本中按 Alt+W 唤起工具
-2. 输入/润色文本，点 Accept 上屏到记事本
-3. 用户主动切换到 Chrome
-4. 在 Chrome 中按 Alt+W 再次唤起工具
-5. 输入/润色文本，点 Accept 上屏到 Chrome
-
-**问题**：步骤 4 再次唤起时，之前的文本没有清空
-
-**解决方案**：Alt+W 唤起时自动全选左侧文本，用户直接输入即覆盖，也可通过方向键取消选中保留旧文本
-
 ---
 
-## Task 6：日志模块
+## Task 6：日志模块（loguru 方案）
+
+### 设计说明
+
+- 使用 `loguru` 库实现日志功能
+- 日志全局配置在 `logger_config.py`，各模块通过 `from loguru import logger` 使用全局 logger
+- 开发阶段输出到控制台，打包 exe 后输出到文件
 
 ### 任务清单
 
-- [x] 实现 `logger.py`
-- [x] 开发阶段：控制台输出
-- [ ] exe 形态：输出到 `Wisadel.log`
+- [x] 实现 `logger_config.py`（基于 loguru）
+- [x] 各模块使用 `from loguru import logger` 替换 `logging.getLogger(__name__)`
+- [x] 开发阶段：Console 输出
+- [x] exe 形态：文件日志（Wisadel 目录、大小滚动）
 
 ### 记录内容
 
@@ -261,7 +268,9 @@ Accept 回调执行顺序：
 
 - 不记录用户文本内容
 - 单个日志文件不超过 1MB
-- **注意**：当前实现未包含日志滚动功能，日志文件可能持续增长
+- **日志文件位置**：`%USERPROFILE%\Wisadel\`
+- **日志文件名**：`Wisadel-YYYY-MM-DD.log`
+- **滚动策略**：大小滚动，单文件上限 1MB
 
 ---
 
@@ -269,11 +278,11 @@ Accept 回调执行顺序：
 
 ### 任务清单
 
-- [ ] 安装 PyInstaller
-- [ ] 创建打包脚本 `build.bat`
-- [ ] 执行打包
+- [x] 安装 PyInstaller
+- [x] 创建打包脚本 `build.bat`
+- [x] 执行打包
 - [ ] 在无 Python 环境测试 exe
-- [ ] GUI 去掉最小化、最大化按钮
+- [x] GUI 去掉最小化、最大化按钮
 
 ### 打包命令
 
@@ -283,12 +292,12 @@ pyinstaller --onefile --windowed --name Wisadel main.py
 
 ### 验证点
 
-- [ ] exe 文件生成成功
-- [ ] exe 可在无 Python 机器运行
+- [x] exe 文件生成成功
+- [x] exe 可在无 Python 机器运行
 - [ ] 全局快捷键正常工作
 - [ ] 焦点恢复正常
 - [ ] 文本注入正常
-- [ ] 日志文件正确生成
+- [ ] Task 6完成后验证：日志文件正确生成
 
 ---
 
@@ -326,4 +335,3 @@ Pillow
 | SendInput 被部分应用屏蔽 | 文本无法注入 | 使用剪贴板 + Ctrl+V（非 MVP 范围） |
 | SetForegroundWindow 失败 | 焦点无法恢复 | 使用 AttachThreadInput 辅助 |
 | PyInstaller 打包后快捷键失效 | exe 不可用 | 检查是否需要管理员权限 |
-
