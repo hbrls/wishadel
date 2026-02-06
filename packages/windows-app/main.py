@@ -1,26 +1,35 @@
 """
-MVP3 - 桌面级文本润色验证工具
+Wisadel - 桌面级文本润色验证工具
+(PySide6 迁移版本)
 """
 
 import logger_config  # 触发全局日志配置
+
+# ============================================================
+# 待后续阶段迁移（暂时保留原结构）
+# ============================================================
 import keyboard
 import os
-from gui import WisadelWindow
 from focus import FocusManager
 from agent import Wisadel, MinimaxProvider
-
-# loguru 的 logger 是全局单例，直接导入使用
 from loguru import logger
+# ============================================================
 
+from PySide6.QtWidgets import QApplication
+from ui.main_window import MainWindow
+from ui.system_tray import SystemTrayIcon
 
-def register_hotkey(hotkey, callback):
-    """注册全局快捷键，suppress=True 阻止按键传递给其他应用"""
-    keyboard.add_hotkey(hotkey, callback, suppress=True)
+import sys
 
 
 # 全局焦点管理器
 focus_mgr = FocusManager()
 window = None
+
+
+def register_hotkey(hotkey, callback):
+    """注册全局快捷键，suppress=True 阻止按键传递给其他应用"""
+    keyboard.add_hotkey(hotkey, callback, suppress=True)
 
 
 def on_hotkey():
@@ -74,26 +83,37 @@ def main():
     global window
 
     logger.info("=" * 50)
-    logger.info("  MVP3 - 桌面级文本润色验证工具")
+    logger.info("  Wisadel - 桌面级文本润色验证工具")
     logger.info("=" * 50)
     logger.info("  快捷键: Alt+W")
     logger.info("  流程: 左侧输入原文 → 润色 → Accept 上屏")
     logger.info("=" * 50)
 
-    # 创建 Wisadel 实例
-    wisadel = create_wisadel()
+    app = QApplication(sys.argv)
 
-    # 创建 GUI（但不显示）
-    window = WisadelWindow(on_accept_callback=on_accept, wisadel=wisadel)
+    # 设置应用属性
+    app.setApplicationName("Wisadel")
+    app.setApplicationDisplayName("Wisadel")
+
+    # 创建 Wisadel 实例（暂时保留，后续阶段迁移）
+    try:
+        wisadel = create_wisadel()
+    except ValueError as e:
+        logger.warning(f"未配置 API Key，Agent 功能暂时不可用: {e}")
+        wisadel = None
+
+    # 创建窗口（PySide6 版本）
+    window = MainWindow(on_accept_callback=on_accept, wisadel=wisadel)
+
+    # 创建托盘图标
+    tray = SystemTrayIcon(window)
+    tray.show()
 
     # 注册全局快捷键
     register_hotkey('alt+w', on_hotkey)
 
-    # 启动时隐藏窗口
-    window.hide()
-
     # 进入主循环
-    window.run()
+    sys.exit(app.exec())
 
 
 if __name__ == "__main__":
