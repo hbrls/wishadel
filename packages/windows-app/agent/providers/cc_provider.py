@@ -1,42 +1,43 @@
 """
-GLM Provider for smolagents
+Claude Code Provider for smolagents
 
-实现 smolagents 的 Model 接口，封装智谱 GLM API 调用
-使用 zai 包（ZhipuAiClient）
+实现 smolagents 的 Model 接口，封装 Claude API 调用
+使用 Anthropic SDK
 """
 
 from typing import List, Dict, Any, Optional
 from smolagents.models import Model, ChatMessage, MessageRole
-from zai import ZhipuAiClient
+import anthropic
+import anthropic.types
 
 
-class GLMProvider(Model):
+class CCProvider(Model):
     """
-    智谱 GLM Provider
+    Claude Code Provider
 
-    实现 smolagents 的 Model 接口，封装智谱 GLM API 调用
-    使用 zai 包（ZhipuAiClient）
+    实现 smolagents 的 Model 接口，封装 Claude API 调用
+    使用 Anthropic SDK
     """
 
-    API_URL = 'https://open.bigmodel.cn/api/paas/v4'
+    API_URL = "https://moacode.org"
 
-    def __init__(self, api_key: str, model: str = "GLM-4.7"):
+    def __init__(self, api_key: str, model: str = "claude-sonnet-4-5-20250929"):
         """
-        初始化 GLM Provider
+        初始化 Claude Code Provider
 
         Args:
-            api_key: 智谱 API Key
-            model: 模型名称（默认 GLM-4.7）
+            api_key: Anthropic API Key
+            model: 模型名称（默认 claude-sonnet-4-5-20250929）
         """
         self.api_key = api_key
         self.model = model
-        self._client: Optional[ZhipuAiClient] = None
+        self._client: Optional[anthropic.Anthropic] = None
 
     @property
-    def client(self) -> ZhipuAiClient:
+    def client(self) -> anthropic.Anthropic:
         """Lazy init client"""
         if self._client is None:
-            self._client = ZhipuAiClient(
+            self._client = anthropic.Anthropic(
                 api_key=self.api_key,
                 base_url=self.API_URL
             )
@@ -51,39 +52,38 @@ class GLMProvider(Model):
         **kwargs
     ) -> ChatMessage:
         """
-        调用 GLM API，返回 ChatMessage
+        调用 Claude API，返回 ChatMessage
 
         Args:
             messages: 消息列表（smolagents ChatMessage 格式）
-            stop_sequences: 停止序列（暂不支持）
-            response_format: 响应格式（暂不支持）
-            tools_to_call_from: 可用工具列表（暂不支持）
+            stop_sequences: 停止序列
+            response_format: 响应格式
+            tools_to_call_from: 可用工具列表
             **kwargs: 其他参数
 
         Returns:
             ChatMessage
         """
         # 转换 ChatMessage 为 API 格式
-        api_messages: List[Dict[str, str]] = []
+        system_message = None
+        anthropic_messages: List[anthropic.types.MessageParam] = []
 
         for msg in messages:
             if msg.role == MessageRole.ASSISTANT:
-                api_messages.append({
+                # 处理 assistant 消息（包含 tool calls）
+                anthropic_messages.append({
                     "role": "assistant",
                     "content": msg.content or ""
                 })
             elif msg.role == MessageRole.USER:
-                api_messages.append({
+                anthropic_messages.append({
                     "role": "user",
                     "content": msg.content or ""
                 })
             elif msg.role == MessageRole.SYSTEM:
-                api_messages.append({
-                    "role": "system",
-                    "content": msg.content or ""
-                })
+                system_message = msg.content
             else:
-                api_messages.append({
+                anthropic_messages.append({
                     "role": str(msg.role),
                     "content": msg.content or ""
                 })
@@ -91,21 +91,21 @@ class GLMProvider(Model):
         # 构建 API 调用参数
         api_params: Dict[str, Any] = {
             "model": self.model,
-            "messages": api_messages,
-            "max_tokens": kwargs.get("max_tokens", 4096),
+            "max_tokens": 4096,
+            "messages": anthropic_messages
         }
 
-        # 添加可选参数
-        if kwargs.get("temperature") is not None:
-            api_params["temperature"] = kwargs["temperature"]
+        if system_message:
+            api_params["system"] = system_message
 
         # 调用 API
-        response = self.client.chat.completions.create(**api_params)
+        response = self.client.messages.create(**api_params)
 
         # 提取文本内容
         text_content = ""
-        if response.choices:
-            text_content = response.choices[0].message.content or ""
+        for block in response.content:
+            if block.type == "text":
+                text_content += block.text
 
         return ChatMessage(
             role=MessageRole.ASSISTANT,
@@ -121,7 +121,7 @@ class GLMProvider(Model):
         **kwargs
     ) -> str:
         """
-        调用 GLM API，返回完整响应文本
+        调用 Claude API，返回完整响应文本
 
         Args:
             messages: 消息列表（dict 格式）
@@ -139,9 +139,10 @@ class GLMProvider(Model):
                 role = MessageRole(msg["role"]) if msg["role"] in ["user", "assistant", "system"] else MessageRole.USER
                 chat_messages.append(ChatMessage(role=role, content=msg["content"]))
 
-            # 调用 generate 方法
             response = self.generate(chat_messages, **kwargs)
             return response.content.strip()
 
+        except anthropic.APIError as e:
+            raise RuntimeError(f"Claude API 调用失败: {str(e)}") from e
         except Exception as e:
-            raise RuntimeError(f"GLM API 调用失败: {str(e)}") from e
+            raise RuntimeError(f"Claude 处理响应失败: {str(e)}") from e
