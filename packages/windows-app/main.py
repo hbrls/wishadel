@@ -8,9 +8,9 @@ import logger_config  # 触发全局日志配置
 # ============================================================
 # 待后续阶段迁移（暂时保留原结构）
 # ============================================================
-import keyboard
+# import keyboard
 import os
-from focus import FocusManager
+# from focus import FocusManager
 from hotkey_manager import register_global_hotkey, unregister_global_hotkey
 from agent import Wisadel, MinimaxProvider
 from loguru import logger
@@ -31,22 +31,22 @@ import sys
 
 
 # 全局焦点管理器
-focus_mgr = FocusManager()
+# focus_mgr = FocusManager()
 window = None
 
 
-def register_hotkey(hotkey, callback):
-    """注册全局快捷键，suppress=True 阻止按键传递给其他应用"""
-    keyboard.add_hotkey(hotkey, callback, suppress=True)
+# def register_hotkey(hotkey, callback):
+#     """注册全局快捷键，suppress=True 阻止按键传递给其他应用"""
+#     keyboard.add_hotkey(hotkey, callback, suppress=True)
 
 
 def on_hotkey():
     """快捷键回调：唤起 GUI（必须在主线程执行）"""
     logger.debug("快捷键触发")
 
-    # 记录焦点（已注释）
-    hwnd = focus_mgr.save_current_focus()
-    logger.debug(f"已记录原窗口句柄: {hwnd}")
+    # # 记录焦点（已注释）
+    # hwnd = focus_mgr.save_current_focus()
+    # logger.debug(f"已记录原窗口句柄: {hwnd}")
 
     # 显示 GUI - 使用 QMetaObject.invokeMethod 确保在主线程执行
     QMetaObject.invokeMethod(
@@ -62,19 +62,19 @@ def on_accept(text):
 
     window.hide()
 
-    # Windows 焦点恢复 + 文本注入（已注释）
-    if not focus_mgr.saved_window_handle:
-        logger.warning("没有保存的窗口句柄，跳过注入")
-        window.hide()
-        return
-    window.hide()
-    logger.debug(f"恢复焦点到窗口: {focus_mgr.saved_window_handle}")
-    focus_mgr.restore_focus(delay_ms=100)
-    if text:
-        focus_mgr.type_text(text)
-        logger.debug("文本注入完成")
-    else:
-        logger.debug("文本为空，跳过注入")
+    # # Windows 焦点恢复 + 文本注入（已注释）
+    # if not focus_mgr.saved_window_handle:
+    #     logger.warning("没有保存的窗口句柄，跳过注入")
+    #     window.hide()
+    #     return
+    # window.hide()
+    # logger.debug(f"恢复焦点到窗口: {focus_mgr.saved_window_handle}")
+    # focus_mgr.restore_focus(delay_ms=100)
+    # if text:
+    #     focus_mgr.type_text(text)
+    #     logger.debug("文本注入完成")
+    # else:
+    #     logger.debug("文本为空，跳过注入")
 
 
 def create_wisadel():
