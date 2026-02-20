@@ -1,7 +1,9 @@
 """系统托盘图标"""
 
-from PySide6.QtWidgets import QSystemTrayIcon, QMenu
-from PySide6.QtGui import QIcon, QAction
+from PySide6.QtWidgets import QSystemTrayIcon, QMenu, QApplication
+from PySide6.QtGui import QAction
+
+from platform_utils import get_tray_icon
 
 
 class SystemTrayIcon(QSystemTrayIcon):
@@ -12,8 +14,8 @@ class SystemTrayIcon(QSystemTrayIcon):
 
         self.parent_window = parent
 
-        # 设置托盘图标
-        self.setIcon(QIcon.fromTheme("dialog-information"))
+        # 设置托盘图标 - 使用自定义 PNG
+        self.setIcon(get_tray_icon())
 
         # 创建右键菜单
         self.menu = QMenu()
@@ -42,5 +44,4 @@ class SystemTrayIcon(QSystemTrayIcon):
 
     def quit_app(self):
         """退出程序"""
-        from PySide6.QtWidgets import QApplication
         QApplication.quit()
