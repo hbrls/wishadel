@@ -11,8 +11,19 @@ import ctypes
 
 from .polish_worker import PolishWorker
 
-# 文本字体设置 - 按优先级指定字体族
-TEXT_FONT_FAMILIES = ["Optima-Regular", "PingFang SC", "Cambria", "Cochin", "Georgia", "Times", "Times New Roman", "serif"]
+# 文本字体设置 - 按优先级指定字体族（跨平台）
+from platform_utils import is_macos, is_windows, is_linux
+
+if is_macos():
+    # macOS 字体
+    TEXT_FONT_FAMILIES = ["PingFang SC", "Helvetica", "Arial", "sans-serif"]
+elif is_windows():
+    # Windows 字体
+    TEXT_FONT_FAMILIES = ["Microsoft YaHei", "SimSun", "Cambria", "Cochin", "Georgia", "Times New Roman", "serif"]
+elif is_linux():
+    raise RuntimeError("Linux 平台尚未支持")
+else:
+    raise RuntimeError("未知平台")
 
 user32 = ctypes.windll.user32
 
