@@ -11,7 +11,7 @@ from PySide6.QtCore import QMetaObject, Qt
 from PySide6.QtWidgets import QApplication
 
 from agent import Wisadel, MinimaxProvider
-from focus import FocusManager
+# from focus import FocusManager
 from hotkey_manager import register_global_hotkey
 from platform_utils import is_macos, is_windows
 
@@ -20,7 +20,7 @@ from ui.system_tray import SystemTrayIcon
 
 
 # 全局焦点管理器
-focus_mgr = FocusManager()
+# focus_mgr = FocusManager()
 window = None
 
 
@@ -29,8 +29,8 @@ def on_hotkey():
     logger.debug("快捷键触发")
 
     # 记录焦点（已注释）
-    hwnd = focus_mgr.save_current_focus()
-    logger.debug(f"已记录原窗口句柄: {hwnd}")
+    # hwnd = focus_mgr.save_current_focus()
+    # logger.debug(f"已记录原窗口句柄: {hwnd}")
 
     # 显示 GUI - 使用 QMetaObject.invokeMethod 确保在主线程执行
     QMetaObject.invokeMethod(
@@ -46,19 +46,19 @@ def on_accept(text):
 
     window.hide()
 
-    # Windows 焦点恢复 + 文本注入（已注释）
-    if not focus_mgr.saved_window_handle:
-        logger.warning("没有保存的窗口句柄，跳过注入")
-        window.hide()
-        return
-    window.hide()
-    logger.debug(f"恢复焦点到窗口: {focus_mgr.saved_window_handle}")
-    focus_mgr.restore_focus(delay_ms=100)
-    if text:
-        focus_mgr.type_text(text)
-        logger.debug("文本注入完成")
-    else:
-        logger.debug("文本为空，跳过注入")
+    # # Windows 焦点恢复 + 文本注入（已注释）
+    # if not focus_mgr.saved_window_handle:
+    #     logger.warning("没有保存的窗口句柄，跳过注入")
+    #     window.hide()
+    #     return
+    # window.hide()
+    # logger.debug(f"恢复焦点到窗口: {focus_mgr.saved_window_handle}")
+    # focus_mgr.restore_focus(delay_ms=100)
+    # if text:
+    #     focus_mgr.type_text(text)
+    #     logger.debug("文本注入完成")
+    # else:
+    #     logger.debug("文本为空，跳过注入")
 
 
 def create_wisadel():

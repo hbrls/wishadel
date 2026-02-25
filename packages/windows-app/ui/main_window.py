@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QSize, QThread, QEvent
 from PySide6.QtGui import QFont, QTextCursor, QTextDocument
 
-import ctypes
+# import ctypes
 
 from .polish_worker import PolishWorker
 
@@ -16,7 +16,7 @@ from platform_utils import get_font_family
 
 TEXT_FONT_FAMILIES = get_font_family()
 
-user32 = ctypes.windll.user32
+# user32 = ctypes.windll.user32
 
 
 class MainWindow(QMainWindow):
@@ -235,8 +235,8 @@ class MainWindow(QMainWindow):
         super().show()
         self.activateWindow()
         # 使用 Windows API 请求前台焦点
-        hwnd = self.winId()
-        user32.SetForegroundWindow(hwnd)
+        # hwnd = self.winId()
+        # user32.SetForegroundWindow(hwnd)
         # 唤起时自动全选左侧文本
         self._focus_left_text()
 
