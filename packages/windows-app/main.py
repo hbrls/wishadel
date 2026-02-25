@@ -1,25 +1,22 @@
-"""
-Wisadel - 桌面级文本润色验证工具
-(PySide6 迁移版本)
-"""
+"""Wisadel - 桌面级文本润色验证工具"""
 
 import logger_config  # 触发全局日志配置
 
-# ============================================================
-# 待后续阶段迁移（暂时保留原结构）
-# ============================================================
-import keyboard
 import os
-from focus import FocusManager
-from agent import Wisadel, MinimaxProvider
-from loguru import logger
-# ============================================================
+import sys
 
+from loguru import logger
+
+from PySide6.QtCore import QMetaObject, Qt
 from PySide6.QtWidgets import QApplication
+
+from agent import Wisadel, MinimaxProvider
+from focus import FocusManager
+from hotkey_manager import register_global_hotkey
+from platform_utils import is_macos, is_windows
+
 from ui.main_window import MainWindow
 from ui.system_tray import SystemTrayIcon
-
-import sys
 
 
 # 全局焦点管理器
@@ -27,40 +24,36 @@ focus_mgr = FocusManager()
 window = None
 
 
-def register_hotkey(hotkey, callback):
-    """注册全局快捷键，suppress=True 阻止按键传递给其他应用"""
-    keyboard.add_hotkey(hotkey, callback, suppress=True)
-
-
 def on_hotkey():
-    """快捷键回调：唤起 GUI"""
-    logger.debug("快捷键触发: Alt+W")
+    """快捷键回调：唤起 GUI（必须在主线程执行）"""
+    logger.debug("快捷键触发")
 
-    # 记录当前前台窗口（唤起前）
+    # 记录焦点（已注释）
     hwnd = focus_mgr.save_current_focus()
     logger.debug(f"已记录原窗口句柄: {hwnd}")
 
-    # 显示 GUI
-    window.show()
+    # 显示 GUI - 使用 QMetaObject.invokeMethod 确保在主线程执行
+    QMetaObject.invokeMethod(
+        window,
+        "show",
+        Qt.QueuedConnection
+    )
 
 
 def on_accept(text):
-    """Accept 按钮回调：将右侧文本注入原窗口"""
-    logger.debug(f"Accept 点击，准备注入 {len(text)} 字符")
+    """Accept 按钮回调：本期仅关闭窗口"""
+    logger.debug(f"Accept 点击，文本长度: {len(text)}")
 
-    # 检查是否有保存的窗口句柄
+    window.hide()
+
+    # Windows 焦点恢复 + 文本注入（已注释）
     if not focus_mgr.saved_window_handle:
         logger.warning("没有保存的窗口句柄，跳过注入")
         window.hide()
         return
-
-    # 隐藏 GUI 并恢复焦点
     window.hide()
     logger.debug(f"恢复焦点到窗口: {focus_mgr.saved_window_handle}")
-    # 延迟原因：GUI 隐藏和焦点转移需要时间，避免竞争条件导致焦点设置失败
     focus_mgr.restore_focus(delay_ms=100)
-
-    # 注入 GUI 右侧文本到原窗口
     if text:
         focus_mgr.type_text(text)
         logger.debug("文本注入完成")
@@ -85,7 +78,7 @@ def main():
     logger.info("=" * 50)
     logger.info("  Wisadel - 桌面级文本润色验证工具")
     logger.info("=" * 50)
-    logger.info("  快捷键: Alt+W")
+    logger.info("  快捷键: Alt+W (Windows) / Ctrl+Option+W (macOS)")
     logger.info("  流程: 左侧输入原文 → 润色 → Accept 上屏")
     logger.info("=" * 50)
 
@@ -95,22 +88,30 @@ def main():
     app.setApplicationName("Wisadel")
     app.setApplicationDisplayName("Wisadel")
 
-    # 创建 Wisadel 实例（暂时保留，后续阶段迁移）
+    # 创建 Wisadel 实例
     try:
         wisadel = create_wisadel()
     except ValueError as e:
         logger.warning(f"未配置 API Key，Agent 功能暂时不可用: {e}")
         wisadel = None
 
-    # 创建窗口（PySide6 版本）
+    # 创建窗口
     window = MainWindow(on_accept_callback=on_accept, wisadel=wisadel)
 
     # 创建托盘图标
     tray = SystemTrayIcon(window)
     tray.show()
 
-    # 注册全局快捷键
-    register_hotkey('alt+w', on_hotkey)
+    # 注册全局快捷键（跨平台）
+    # 使用 pynput 快捷键字符串格式
+    if is_macos():
+        # macOS: Ctrl + Option + W
+        register_global_hotkey('<ctrl>+<alt>+w', on_hotkey)
+    elif is_windows():
+        # Windows: Alt + W
+        register_global_hotkey('<alt>+w', on_hotkey)
+    else:
+        raise RuntimeError("Linux 平台尚未支持全局快捷键功能")
 
     # 进入主循环
     sys.exit(app.exec())

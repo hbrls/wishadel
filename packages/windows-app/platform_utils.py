@@ -30,6 +30,27 @@ def get_platform_name():
         return "Unknown"
 
 
+def get_font_family():
+    """获取当前平台的默认字体族列表
+
+    Returns:
+        list: 字体族列表，按优先级排序
+
+    Raises:
+        RuntimeError: 不支持的平台
+    """
+    if is_macos():
+        # macOS 字体
+        return ["PingFang SC", "Helvetica", "Arial", "sans-serif"]
+    elif is_windows():
+        # Windows 字体
+        return ["Microsoft YaHei", "SimSun", "Cambria", "Cochin", "Georgia", "Times New Roman", "serif"]
+    elif is_linux():
+        raise RuntimeError("Linux 平台尚未支持")
+    else:
+        raise RuntimeError("未知平台")
+
+
 def get_tray_icon():
     """获取托盘图标，支持平台差异
 

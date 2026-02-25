@@ -11,8 +11,10 @@ import ctypes
 
 from .polish_worker import PolishWorker
 
-# 文本字体设置 - 按优先级指定字体族
-TEXT_FONT_FAMILIES = ["Optima-Regular", "PingFang SC", "Cambria", "Cochin", "Georgia", "Times", "Times New Roman", "serif"]
+# 文本字体设置 - 按优先级指定字体族（跨平台）
+from platform_utils import get_font_family
+
+TEXT_FONT_FAMILIES = get_font_family()
 
 user32 = ctypes.windll.user32
 
