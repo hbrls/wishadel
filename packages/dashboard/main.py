@@ -2,7 +2,6 @@
 
 import logger_config  # 触发全局日志配置
 
-import os
 import sys
 
 from loguru import logger
@@ -11,7 +10,10 @@ from loguru import logger
 # 注意：不向 sys.path 添加任何目录，确保隔离性
 from _agents import agents, Wisadel, MinimaxProvider
 
-from PySide6.QtCore import QMetaObject, Qt
+# 跨包导入：使用 _coders 模块加载 coders
+# 注意：不向 sys.path 添加任何目录，确保隔离性
+from _coders import KiloCode, ClaudeCode, run_command
+
 from PySide6.QtWidgets import QApplication
 
 from platform_utils import is_macos, is_windows
@@ -31,22 +33,6 @@ def main():
     logger.info("=" * 50)
     logger.info("  Dashboard - 项目启动")
     logger.info("=" * 50)
-
-    # 验证跨包导入：演示使用 Wisadel 和 MinimaxProvider
-    logger.info("验证跨包导入模式...")
-    logger.info(f"Wisadel 类已加载: {Wisadel}")
-    logger.info(f"MinimaxProvider 类已加载: {MinimaxProvider}")
-
-    # TASK-204: 验证 MiniMaxProvider 实际调用
-    api_key = os.environ.get("WISADEL_MINIMAX_API_KEY")
-    model = os.environ.get("WISADEL_MINIMAX_MODEL", "MiniMax-M2.1")
-    provider = MinimaxProvider(api_key=api_key, model=model)
-    test_input = "Hello MiniMax"
-    messages = [{"role": "user", "content": test_input}]
-    output = provider(messages)
-    logger.info(f"MiniMaxProvider 输入: {test_input}")
-    logger.info(f"MiniMaxProvider 输出类型: {type(output).__name__}")
-    logger.info(f"MiniMaxProvider 输出: {output}")
 
     app = QApplication(sys.argv)
 

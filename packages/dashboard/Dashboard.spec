@@ -5,6 +5,7 @@ from pathlib import Path
 
 project_root = Path(SPECPATH).resolve().parent
 agents_dir = project_root / 'agents'
+coders_dir = project_root / 'coders'
 
 
 a = Analysis(
@@ -13,6 +14,7 @@ a = Analysis(
     binaries=[],
     datas=[
         (str(agents_dir), 'agents'),
+        (str(coders_dir), 'coders'),
     ],
     hiddenimports=[
         'smolagents',
